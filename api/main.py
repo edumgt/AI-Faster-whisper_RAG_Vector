@@ -1,5 +1,7 @@
 from __future__ import annotations
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes import router
 
@@ -14,3 +16,8 @@ app.add_middleware(
 )
 
 app.include_router(router)
+
+
+@app.get("/")
+def home():
+    return FileResponse(Path("api/frontend/index.html"))

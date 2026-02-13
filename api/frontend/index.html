@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Counseling Multimodal RAG Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="min-h-screen bg-slate-950 text-slate-100">
+    <div class="mx-auto max-w-6xl px-6 py-10">
+      <header class="mb-8 rounded-2xl border border-slate-800 bg-gradient-to-r from-indigo-900/60 via-slate-900 to-cyan-900/40 p-8 shadow-2xl shadow-indigo-900/20">
+        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-300">AI Faster-Whisper RAG Vector</p>
+        <h1 class="mt-3 text-3xl font-bold md:text-4xl">상담 분석 + RAG 대시보드</h1>
+        <p class="mt-3 max-w-3xl text-slate-300">텍스트/음성 상담 내용을 수집하고, 분석 결과와 유사 사례 기반 리포트를 빠르게 생성합니다.</p>
+      </header>
+
+      <main class="grid gap-6 md:grid-cols-2">
+        <section class="rounded-2xl border border-slate-800 bg-slate-900/80 p-6">
+          <h2 class="text-xl font-semibold text-indigo-300">1) 텍스트 Ingest</h2>
+          <div class="mt-4 space-y-3">
+            <input id="txtClient" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" placeholder="client_id (예: C001)" />
+            <textarea id="txtTranscript" rows="6" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" placeholder="상담 텍스트를 입력하세요"></textarea>
+            <button id="btnIngestText" class="w-full rounded-lg bg-indigo-500 px-4 py-2 font-semibold text-white hover:bg-indigo-400">텍스트 저장</button>
+          </div>
+        </section>
+
+        <section class="rounded-2xl border border-slate-800 bg-slate-900/80 p-6">
+          <h2 class="text-xl font-semibold text-cyan-300">2) 오디오 Ingest (선택)</h2>
+          <div class="mt-4 space-y-3">
+            <input id="audClient" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" placeholder="client_id (예: C001)" />
+            <input id="audFile" type="file" accept="audio/*" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" />
+            <button id="btnIngestAudio" class="w-full rounded-lg bg-cyan-500 px-4 py-2 font-semibold text-slate-950 hover:bg-cyan-400">오디오 업로드</button>
+          </div>
+        </section>
+
+        <section class="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 md:col-span-2">
+          <h2 class="text-xl font-semibold text-emerald-300">3) 리포트 생성</h2>
+          <div class="mt-4 grid gap-3 md:grid-cols-3">
+            <input id="repClient" class="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" placeholder="client_id" />
+            <input id="repSession" class="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" placeholder="session_id" />
+            <button id="btnReport" class="rounded-lg bg-emerald-500 px-4 py-2 font-semibold text-slate-950 hover:bg-emerald-400">리포트 조회</button>
+          </div>
+          <pre id="result" class="mt-4 max-h-[360px] overflow-auto rounded-xl border border-slate-700 bg-slate-950 p-4 text-sm text-slate-200"></pre>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const result = document.getElementById('result');
+      const print = (data) => (result.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2));
+
+      document.getElementById('btnIngestText').addEventListener('click', async () => {
+        const client_id = document.getElementById('txtClient').value.trim();
+        const transcript = document.getElementById('txtTranscript').value.trim();
+        if (!client_id || !transcript) return print('client_id와 transcript를 입력하세요.');
+        const res = await fetch('/ingest/text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client_id, transcript }) });
+        print(await res.json());
+      });
+
+      document.getElementById('btnIngestAudio').addEventListener('click', async () => {
+        const client_id = document.getElementById('audClient').value.trim();
+        const file = document.getElementById('audFile').files[0];
+        if (!client_id || !file) return print('client_id와 오디오 파일을 입력하세요.');
+        const fd = new FormData();
+        fd.append('client_id', client_id);
+        fd.append('audio', file);
+        const res = await fetch('/ingest/audio', { method: 'POST', body: fd });
+        print(await res.json());
+      });
+
+      document.getElementById('btnReport').addEventListener('click', async () => {
+        const client_id = document.getElementById('repClient').value.trim();
+        const session_id = document.getElementById('repSession').value.trim();
+        if (!client_id || !session_id) return print('client_id와 session_id를 입력하세요.');
+        const res = await fetch(`/report?client_id=${encodeURIComponent(client_id)}&session_id=${encodeURIComponent(session_id)}`);
+        print(await res.json());
+      });
+    </script>
+  </body>
+</html>
