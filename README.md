@@ -19,19 +19,18 @@
 
 ```mermaid
 flowchart LR
-    A[Frontend<br/>Tailwind Dashboard] --> B[FastAPI Router]
-    B --> C[Ingest Text / Audio]
-    C --> D[STT faster-whisper (optional)]
-    C --> E[Analysis Engine<br/>Rule-based + LLM(optional)]
-    E --> F[RAG Retriever]
-    F --> G[ChromaDB Vector Store]
-    E --> H[SQLite Metadata/Session DB]
-    E --> I[Report Generator]
-    I --> J[JSON Response]
-    I --> K[PDF via ReportLab]
-    E --> L[OpenAI/Ollama (optional)]
+    A["Frontend\nTailwind Dashboard"] --> B["FastAPI Router"]
+    B --> C["Ingest Text / Audio"]
+    C --> D["STT: faster-whisper (optional)"]
+    C --> E["Analysis Engine\nRule-based + LLM (optional)"]
+    E --> F["RAG Retriever"]
+    F --> G["ChromaDB Vector Store"]
+    E --> H["SQLite Metadata / Session DB"]
+    E --> I["Report Generator"]
+    I --> J["JSON Response"]
+    I --> K["PDF via ReportLab"]
+    E --> L["OpenAI / Ollama (optional)"]
 ```
-
 - 위치: `docs/tech_stack.mmd`
 - 특징: 바이너리 파일 없이 PR 리뷰/머지 가능한 텍스트 다이어그램
 
