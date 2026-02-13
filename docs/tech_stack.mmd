@@ -1,0 +1,12 @@
+flowchart LR
+    A[Frontend<br/>Tailwind Dashboard] --> B[FastAPI Router]
+    B --> C[Ingest Text / Audio]
+    C --> D[STT faster-whisper (optional)]
+    C --> E[Analysis Engine<br/>Rule-based + LLM(optional)]
+    E --> F[RAG Retriever]
+    F --> G[ChromaDB Vector Store]
+    E --> H[SQLite Metadata/Session DB]
+    E --> I[Report Generator]
+    I --> J[JSON Response]
+    I --> K[PDF via ReportLab]
+    E --> L[OpenAI/Ollama (optional)]
