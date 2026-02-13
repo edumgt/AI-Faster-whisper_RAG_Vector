@@ -18,21 +18,18 @@
 아래 이미지는 이 저장소의 구성요소와 데이터 흐름을 도식화한 결과입니다.
 
 ```mermaid
-flowchart LR
+flowchart TB
     A["Frontend\nTailwind Dashboard"] --> B["FastAPI Router"]
     B --> C["Ingest Text / Audio"]
-    C --> D["STT: faster-whisper (optional)"]
-    C --> E["Analysis Engine\nRule-based + LLM (optional)"]
-    E --> F["RAG Retriever"]
+    C --> D["STT: faster-whisper (optional)"] & E["Analysis Engine\nRule-based + LLM (optional)"]
+    E --> F["RAG Retriever"] & H["SQLite Metadata / Session DB"] & I["Report Generator"] & L["OpenAI / Ollama (optional)"]
     F --> G["ChromaDB Vector Store"]
-    E --> H["SQLite Metadata / Session DB"]
-    E --> I["Report Generator"]
-    I --> J["JSON Response"]
-    I --> K["PDF via ReportLab"]
-    E --> L["OpenAI / Ollama (optional)"]
+    I --> J["JSON Response"] & K["PDF via ReportLab"]
 ```
 - 위치: `docs/tech_stack.mmd`
 - 특징: 바이너리 파일 없이 PR 리뷰/머지 가능한 텍스트 다이어그램
+
+![](./flow.png)
 
 ---
 
