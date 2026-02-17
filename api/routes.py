@@ -60,10 +60,10 @@ def ingest_audio(
     return {"ok": True, "session_id": sid, "transcript": transcript}
 
 @router.get("/report")
-def report(client_id: str, session_id: str):
+def report(client_id: str, session_id: str, persona: str = "default"):
     settings = Settings()
     try:
-        out = build_report(settings, client_id, session_id)
+        out = build_report(settings, client_id, session_id, persona=persona)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -76,15 +76,16 @@ def report(client_id: str, session_id: str):
         transcript=out["transcript"],
         analysis=analysis,
         rag_hits=rag_hits,
+        persona=out.get("persona", "default"),
         final_report=out.get("final_report"),
     )
     return resp.model_dump()
 
 @router.get("/report/pdf")
-def report_pdf(client_id: str, session_id: str):
+def report_pdf(client_id: str, session_id: str, persona: str = "default"):
     settings = Settings()
     try:
-        out = build_report(settings, client_id, session_id)
+        out = build_report(settings, client_id, session_id, persona=persona)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
