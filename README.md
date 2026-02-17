@@ -9,7 +9,7 @@
 - PDF 리포트 다운로드
 - Tailwind 기반 대시보드 UI
 
-> ⚠️ 데모/교육용 예시입니다. 실제 서비스에서는 개인정보 보호, 임상 책임 범위, 보안/감사 로깅, 오탐 대응 절차가 반드시 필요합니다.
+![alt text](image.png)
 
 ---
 
@@ -65,7 +65,7 @@ flowchart TB
 ## 실행 방법
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env
@@ -80,11 +80,91 @@ uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 
 ---
 
+```
+curl -s http://localhost:11434/api/tags | head
+```
+---
+```
+docker run -d --name ollama \
+  -p 11434:11434 \
+  -v ollama:/root/.ollama \
+  --restart unless-stopped \
+  ollama/ollama:latest
+```
+---
+```
+ollama pull llama3.1
+```
+---
+```
+root@DESKTOP-D6A344Q:/home/AI-Faster-whisper_RAG_Vector# docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Ports}}" | grep -i ollama
+ollama        ollama/ollama:latest   0.0.0.0:11434->11434/tcp, [::]:11434->11434/tcp
+```
+---
+```
+docker exec -it ollama ollama pull llama3.1
+```
+---
+```
+root@DESKTOP-D6A344Q:/home/AI-Faster-whisper_RAG_Vector# curl -s http://localhost:11434/api/tags | head
+{"models":[{"name":"llama3.1:latest","model":"llama3.1:latest","modified_at":"2026-02-17T13:16:24.945232012Z","size":4920753328,"digest":"46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e","details":{"parent_model":"","format":"gguf","family":"llama","families":["llama"],"parameter_size":"8.0B","quantization_level":"Q4_K_M"}}]}root@DESKTOP-D6A344Q:/home/AI-Faster-whisper_RAG_Vector# 
+```
+---
+```
+root@DESKTOP-D6A344Q:/home/AI-Faster-whisper_RAG_Vector# curl -s http://localhost:11434/api/generate \
+  -H "Content-Type: application/json" \
+  -d '{"model":"llama3.1","prompt":"한국어로 한 문장만: Ollama 준비 완료"}' | head
+{"model":"llama3.1","created_at":"2026-02-17T13:17:25.775956502Z","response":"O","done":false}
+{"model":"llama3.1","created_at":"2026-02-17T13:17:25.996958301Z","response":"ll","done":false}
+{"model":"llama3.1","created_at":"2026-02-17T13:17:26.231409922Z","response":"ama","done":false}
+{"model":"llama3.1","created_at":"2026-02-17T13:17:26.486278971Z","response":"는","done":false}
+{"model":"llama3.1","created_at":"2026-02-17T13:17:26.726166309Z","response":" ","done":false}
+{"model":"llama3.1","created_at":"2026-02-17T13:17:26.992847562Z","response":"200","done":false}
+{"model":"llama3.1","created_at":"2026-02-17T13:17:27.233127504Z","response":"9","done":false}
+{"model":"llama3.1","created_at":"2026-02-17T13:17:27.476620406Z","response":"년","done":false}
+{"model":"llama3.1","created_at":"2026-02-17T13:17:27.740653956Z","response":" ","done":false}
+{"model":"llama3.1","created_at":"2026-02-17T13:17:27.969888368Z","response":"8","done":false}
+```
 ## 빠른 API 테스트
 
 ### 1) 샘플 데이터 적재
 ```bash
 curl -X POST http://localhost:8000/seed
+```
+---
+```
+/seed가 흔히 하는 일 (RAG 프로젝트에서)
+
+당신 .env 구성( DB_PATH=runtime/app.db, CHROMA_DIR=runtime/chroma_store, RAG_TOP_K=4, OLLAMA_MODEL 등 )을 보면, /seed는 대체로 아래 중 하나(또는 조합)일 가능성이 큽니다.
+
+SQLite 초기 데이터 삽입
+
+runtime/app.db에 테이블 생성 + 기본 데이터 insert (예: 사용자/설정/샘플 질의 등)
+
+RAG용 문서 인덱싱
+
+특정 폴더의 문서(txt/pdf/md)를 읽어서 chunking → embedding 생성 → Chroma( runtime/chroma_store )에 저장
+
+샘플 데이터/데모 시나리오 설치
+
+“테스트 질문/답변”, “샘플 문서”, “데모 컬렉션” 등을 만들어서 바로 검색/질문 가능하게 함
+
+(주의) 기존 데이터 리셋/재생성
+
+어떤 구현은 seed 전에 기존 컬렉션/테이블을 지우고 다시 만들기도 합니다.
+```
+
+---
+```
+SESSION_ID=$(python3 - <<'PY'
+import uuid
+print(uuid.uuid4())
+PY
+)
+
+curl -X POST "http://localhost:8000/ingest/text" \
+  -H "Content-Type: application/json" \
+  -d "{\"client_id\":\"C001\",\"session_id\":\"$SESSION_ID\",\"transcript\":\"회의에서 무시당한 느낌이 들어 화가 났고, 집에 와서도 불안해서 잠을 잘 못 잤어요.\"}"
 ```
 
 ### 2) 텍스트 ingest
