@@ -28,4 +28,5 @@ class ReportOut(BaseModel):
     transcript: str
     analysis: AnalysisResult
     rag_hits: List[RagHit] = Field(default_factory=list)
+    persona: str = "default"
     final_report: Optional[str] = None

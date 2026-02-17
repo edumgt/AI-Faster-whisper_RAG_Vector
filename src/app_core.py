@@ -7,7 +7,7 @@ from .storage import Storage
 from .vectordb import VectorStore
 from .embeddings import SentenceTransformerEmbedder, OpenAIEmbedder
 from .analysis import analyze
-from .rag import format_hits_for_prompt, RAG_REPORT_SYSTEM, build_final_report_prompt
+from .rag import format_hits_for_prompt, build_final_report_prompt, build_report_system_prompt, resolve_persona
 from .schemas import RagHit, AnalysisResult
 
 def _now_iso() -> str:
@@ -81,7 +81,7 @@ def rag_search(settings: Settings, client_id: str, transcript: str) -> List[RagH
         hits.append(RagHit(session_id=sid, client_id=client_id, score=score, snippet=snippet))
     return hits
 
-def build_report(settings: Settings, client_id: str, session_id: str):
+def build_report(settings: Settings, client_id: str, session_id: str, persona: str = "default"):
     store = Storage(settings.db_path)
     sess = store.get_session(session_id)
     if not sess:
@@ -95,12 +95,13 @@ def build_report(settings: Settings, client_id: str, session_id: str):
     hits = rag_search(settings, client_id, sess.transcript)
     rag_context = format_hits_for_prompt(hits)
 
+    persona_key = resolve_persona(persona)
     final_report: Optional[str] = None
     llm = make_llm(settings)
     if llm is not None:
         prompt = build_final_report_prompt(sess.transcript, rag_context, analysis_json)
         try:
-            final_report = llm.chat_text(RAG_REPORT_SYSTEM, prompt)
+            final_report = llm.chat_text(build_report_system_prompt(persona_key), prompt)
         except Exception:
             final_report = None
 
@@ -110,5 +111,6 @@ def build_report(settings: Settings, client_id: str, session_id: str):
         "transcript": sess.transcript,
         "analysis": analysis.model_dump(),
         "rag_hits": [h.model_dump() for h in hits],
+        "persona": persona_key,
         "final_report": final_report,
     }

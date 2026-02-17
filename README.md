@@ -96,8 +96,10 @@ curl -X POST "http://localhost:8000/ingest/text" \
 
 ### 3) 리포트 생성
 ```bash
-curl "http://localhost:8000/report?client_id=C001&session_id=<SESSION_ID>"
+curl "http://localhost:8000/report?client_id=C001&session_id=<SESSION_ID>&persona=warm"
 ```
+
+- `persona` 옵션: `default | warm | coach | strict` (미지정 시 `default`)
 
 ### 4) PDF 다운로드
 ```bash

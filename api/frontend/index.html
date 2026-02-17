@@ -38,7 +38,13 @@
           <div class="mt-4 grid gap-3 md:grid-cols-3">
             <input id="repClient" class="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" placeholder="client_id" />
             <input id="repSession" class="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" placeholder="session_id" />
-            <button id="btnReport" class="rounded-lg bg-emerald-500 px-4 py-2 font-semibold text-slate-950 hover:bg-emerald-400">리포트 조회</button>
+            <select id="repPersona" class="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100">
+              <option value="default">persona: default(기본)</option>
+              <option value="warm">persona: warm(공감형)</option>
+              <option value="coach">persona: coach(코칭형)</option>
+              <option value="strict">persona: strict(구조화형)</option>
+            </select>
+            <button id="btnReport" class="rounded-lg bg-emerald-500 px-4 py-2 font-semibold text-slate-950 hover:bg-emerald-400 md:col-span-3">리포트 조회</button>
           </div>
           <pre id="result" class="mt-4 max-h-[360px] overflow-auto rounded-xl border border-slate-700 bg-slate-950 p-4 text-sm text-slate-200"></pre>
         </section>
@@ -71,8 +77,9 @@
       document.getElementById('btnReport').addEventListener('click', async () => {
         const client_id = document.getElementById('repClient').value.trim();
         const session_id = document.getElementById('repSession').value.trim();
+        const persona = document.getElementById('repPersona').value;
         if (!client_id || !session_id) return print('client_id와 session_id를 입력하세요.');
-        const res = await fetch(`/report?client_id=${encodeURIComponent(client_id)}&session_id=${encodeURIComponent(session_id)}`);
+        const res = await fetch(`/report?client_id=${encodeURIComponent(client_id)}&session_id=${encodeURIComponent(session_id)}&persona=${encodeURIComponent(persona)}`);
         print(await res.json());
       });
     </script>
