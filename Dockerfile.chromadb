@@ -1,0 +1,54 @@
+# Dockerfile.chromadb
+# Docker image that packages a pre-built ChromaDB with psychoanalysis knowledge.
+#
+# Build:
+#   docker build -f Dockerfile.chromadb -t edumgt/psycho-chroma-db:latest .
+#
+# Run (standalone ChromaDB HTTP server):
+#   docker run -d -p 8001:8001 --name psycho-chroma edumgt/psycho-chroma-db:latest
+#
+# Use volume to persist/export the DB:
+#   docker run -d -p 8001:8001 \
+#     -v $(pwd)/runtime/chroma_store:/app/runtime/chroma_store \
+#     --name psycho-chroma edumgt/psycho-chroma-db:latest
+
+FROM python:3.11-slim
+
+LABEL maintainer="edumgt"
+LABEL description="ChromaDB pre-loaded with Korean psychoanalysis knowledge for RAG counseling"
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir \
+        chromadb>=0.5.5 \
+        sentence-transformers>=3.0.1 \
+        numpy>=1.26.4
+
+# Copy source files needed for the build
+COPY src/ ./src/
+COPY scripts/ ./scripts/
+COPY samples/psychoanalysis_seed.jsonl ./samples/psychoanalysis_seed.jsonl
+
+# Pre-build the ChromaDB with the psychoanalysis knowledge base
+# This embeds all documents during image build so the DB is ready at runtime.
+RUN python scripts/build_psycho_chroma.py \
+        --chroma-dir runtime/chroma_store \
+        --seed samples/psychoanalysis_seed.jsonl \
+        --collection psychoanalysis_knowledge \
+        --model sentence-transformers/all-MiniLM-L6-v2
+
+# Expose ChromaDB HTTP port
+EXPOSE 8001
+
+# Run the ChromaDB HTTP server (chroma run is available in chromadb >= 0.4)
+CMD ["chroma", "run", \
+     "--path", "runtime/chroma_store", \
+     "--host", "0.0.0.0", \
+     "--port", "8001"]

@@ -225,3 +225,70 @@ export OLLAMA_MODEL=llama3.1
 - Chroma: `./runtime/chroma_store/`
 - 임시 업로드: `./runtime/tmp/`
 - PDF 결과물: `./runtime/pdf/`
+
+---
+
+## 정신분석학 지식 기반 ChromaDB 구축 및 Docker 배포
+
+### 1) 정신분석학 콘텐츠 크롤링 및 시드 데이터 업데이트
+
+```bash
+# Built-in corpus 전용 (네트워크 불필요)
+python scripts/crawl_psychoanalysis.py --no-wikipedia
+
+# Wikipedia 한국어 크롤링 포함 (네트워크 필요)
+python scripts/crawl_psychoanalysis.py
+```
+
+출력 파일: `samples/psychoanalysis_seed.jsonl` (68개 이상 항목)
+
+내용: 프로이트 이론, 방어기제, 융 분석심리학, 대상관계 이론, 애착이론, 자기심리학, 정신병리학적 개념 등 핵심 정신분석학 지식 (한국어)
+
+### 2) ChromaDB 지식 베이스 빌드
+
+```bash
+python scripts/build_psycho_chroma.py \
+    --chroma-dir runtime/chroma_store \
+    --seed samples/psychoanalysis_seed.jsonl \
+    --collection psychoanalysis_knowledge
+```
+
+빌드 후 `runtime/chroma_store/`에 `psychoanalysis_knowledge` 컬렉션이 생성됩니다.
+리포트 생성 시 자동으로 관련 정신분석학 개념이 함께 검색됩니다 (`psych_hits` 필드).
+
+### 3) Docker 이미지 빌드
+
+```bash
+docker build -f Dockerfile.chromadb -t edumgt/psycho-chroma-db:latest .
+```
+
+### 4) Docker Hub(edumgt)로 Push
+
+```bash
+# 수동 배포
+docker login
+bash scripts/push_dockerhub.sh latest
+
+# 특정 버전 태그
+bash scripts/push_dockerhub.sh v1.0.0
+
+# CI 환경 (Personal Access Token 사용)
+DOCKER_PAT=<token> bash scripts/push_dockerhub.sh latest
+```
+
+Docker Hub 이미지: `edumgt/psycho-chroma-db:latest`
+
+### 5) Docker Compose로 전체 스택 실행
+
+```bash
+# .env 파일 설정 후
+docker compose up -d
+
+# 서비스 확인
+docker compose ps
+```
+
+서비스 구성:
+- `psycho-chroma` (port 8001): 정신분석학 ChromaDB HTTP 서버
+- `api` (port 8000): 상담 RAG API
+
