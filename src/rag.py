@@ -18,6 +18,15 @@ def format_hits_for_prompt(hits: List[RagHit]) -> str:
         lines.append(f"[{i}] session_id={h.session_id} score={h.score:.4f}\n{h.snippet}")
     return "\n\n".join(lines)
 
+
+def format_psych_hits_for_prompt(hits: List[RagHit]) -> str:
+    if not hits:
+        return "(no psychoanalysis knowledge matched)"
+    lines = []
+    for i, h in enumerate(hits, 1):
+        lines.append(f"[{i}] score={h.score:.4f}\n{h.snippet}")
+    return "\n\n".join(lines)
+
 RAG_REPORT_SYSTEM = """당신은 상담 기록 기반 리포트 작성 도우미입니다.
 - 현재 세션 transcript + 과거 유사 세션 요약(RAG 히스토리)을 함께 보고,
   상담사가 활용할 수 있는 '상황 요약 / 패턴 / 위험 신호 / 개입 아이디어'를 작성하세요.
@@ -35,7 +44,10 @@ def build_report_system_prompt(persona: str | None) -> str:
     key = resolve_persona(persona)
     return f"{RAG_REPORT_SYSTEM}\n- 페르소나 지시: {PERSONA_SYSTEM_SUFFIX[key]}"
 
-def build_final_report_prompt(transcript: str, rag_context: str, analysis_json: Dict[str, Any]) -> str:
+def build_final_report_prompt(transcript: str, rag_context: str, analysis_json: Dict[str, Any], psych_context: str = "") -> str:
+    psych_section = ""
+    if psych_context and psych_context != "(no psychoanalysis knowledge matched)":
+        psych_section = f"\n\n[정신분석학 지식 - 관련 이론/개념]\n{psych_context}"
     return f"""[현재 세션 Transcript]
 {normalize_text(transcript)}
 
@@ -43,11 +55,12 @@ def build_final_report_prompt(transcript: str, rag_context: str, analysis_json: 
 {analysis_json}
 
 [RAG 히스토리 - 유사 과거 세션]
-{rag_context}
+{rag_context}{psych_section}
 
 요청:
 1) 5줄 내외로 현재 세션 핵심 요약
 2) 반복 패턴/트리거(있다면)
 3) 위험 신호와 보호 요인
-4) 다음 세션에서 시도할 질문/개입 아이디어 (불릿 5개)
+4) 관련 정신분석학적 개념/이론 (해당 시)
+5) 다음 세션에서 시도할 질문/개입 아이디어 (불릿 5개)
 """.strip()

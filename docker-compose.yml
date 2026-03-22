@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  # ----------------------------------------------------------------
+  # Pre-built ChromaDB with psychoanalysis knowledge
+  # Image: edumgt/psycho-chroma-db
+  # ----------------------------------------------------------------
+  psycho-chroma:
+    image: edumgt/psycho-chroma-db:latest
+    container_name: psycho-chroma
+    ports:
+      - "8001:8001"
+    volumes:
+      # Persist / share the pre-built Chroma store
+      - chroma_data:/app/runtime/chroma_store
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8001/api/v1/heartbeat', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ----------------------------------------------------------------
+  # Main counseling RAG API (uses the Chroma DB above)
+  # ----------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: counseling-api
+    env_file: .env
+    environment:
+      CHROMA_DIR: runtime/chroma_store
+      RUNTIME_DIR: runtime
+    ports:
+      - "8000:8000"
+    volumes:
+      - api_runtime:/app/runtime
+    depends_on:
+      psycho-chroma:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  chroma_data:
+  api_runtime:

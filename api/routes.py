@@ -70,12 +70,14 @@ def report(client_id: str, session_id: str, persona: str = "default"):
     # response_model 형태에 맞게 validate
     analysis = AnalysisResult.model_validate(out["analysis"])
     rag_hits = [RagHit.model_validate(x) for x in out.get("rag_hits", [])]
+    psych_hits = [RagHit.model_validate(x) for x in out.get("psych_hits", [])]
     resp = ReportOut(
         session_id=session_id,
         client_id=client_id,
         transcript=out["transcript"],
         analysis=analysis,
         rag_hits=rag_hits,
+        psych_hits=psych_hits,
         persona=out.get("persona", "default"),
         final_report=out.get("final_report"),
     )
