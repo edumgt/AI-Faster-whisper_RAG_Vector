@@ -1,87 +1,756 @@
 <!doctype html>
 <html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Counseling Multimodal RAG Demo</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-  </head>
-  <body class="min-h-screen bg-slate-950 text-slate-100">
-    <div class="mx-auto max-w-6xl px-6 py-10">
-      <header class="mb-8 rounded-2xl border border-slate-800 bg-gradient-to-r from-indigo-900/60 via-slate-900 to-cyan-900/40 p-8 shadow-2xl shadow-indigo-900/20">
-        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-300">AI Faster-Whisper RAG Vector</p>
-        <h1 class="mt-3 text-3xl font-bold md:text-4xl">상담 분석 + RAG 대시보드</h1>
-        <p class="mt-3 max-w-3xl text-slate-300">텍스트/음성 상담 내용을 수집하고, 분석 결과와 유사 사례 기반 리포트를 빠르게 생성합니다.</p>
-      </header>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Counseling AI · Copilot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; }
 
-      <main class="grid gap-6 md:grid-cols-2">
-        <section class="rounded-2xl border border-slate-800 bg-slate-900/80 p-6">
-          <h2 class="text-xl font-semibold text-indigo-300">1) 텍스트 Ingest</h2>
-          <div class="mt-4 space-y-3">
-            <input id="txtClient" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" placeholder="client_id (예: C001)" />
-            <textarea id="txtTranscript" rows="6" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" placeholder="상담 텍스트를 입력하세요"></textarea>
-            <button id="btnIngestText" class="w-full rounded-lg bg-indigo-500 px-4 py-2 font-semibold text-white hover:bg-indigo-400">텍스트 저장</button>
-          </div>
-        </section>
+    body { background: #f3f2f1; }
 
-        <section class="rounded-2xl border border-slate-800 bg-slate-900/80 p-6">
-          <h2 class="text-xl font-semibold text-cyan-300">2) 오디오 Ingest (선택)</h2>
-          <div class="mt-4 space-y-3">
-            <input id="audClient" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" placeholder="client_id (예: C001)" />
-            <input id="audFile" type="file" accept="audio/*" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" />
-            <button id="btnIngestAudio" class="w-full rounded-lg bg-cyan-500 px-4 py-2 font-semibold text-slate-950 hover:bg-cyan-400">오디오 업로드</button>
-          </div>
-        </section>
+    /* Copilot rainbow gradient */
+    .copilot-gradient {
+      background: linear-gradient(135deg, #29c9f5 0%, #7b61ff 35%, #d63aff 65%, #ff8a3d 100%);
+    }
+    .copilot-gradient-text {
+      background: linear-gradient(135deg, #29c9f5 0%, #7b61ff 40%, #d63aff 80%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .copilot-gradient-border {
+      background: linear-gradient(white, white) padding-box,
+                  linear-gradient(135deg, #29c9f5, #7b61ff, #d63aff) border-box;
+      border: 2px solid transparent;
+    }
 
-        <section class="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 md:col-span-2">
-          <h2 class="text-xl font-semibold text-emerald-300">3) 리포트 생성</h2>
-          <div class="mt-4 grid gap-3 md:grid-cols-3">
-            <input id="repClient" class="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" placeholder="client_id" />
-            <input id="repSession" class="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" placeholder="session_id" />
-            <select id="repPersona" class="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100">
-              <option value="default">persona: default(기본)</option>
-              <option value="warm">persona: warm(공감형)</option>
-              <option value="coach">persona: coach(코칭형)</option>
-              <option value="strict">persona: strict(구조화형)</option>
-            </select>
-            <button id="btnReport" class="rounded-lg bg-emerald-500 px-4 py-2 font-semibold text-slate-950 hover:bg-emerald-400 md:col-span-3">리포트 조회</button>
-          </div>
-          <pre id="result" class="mt-4 max-h-[360px] overflow-auto rounded-xl border border-slate-700 bg-slate-950 p-4 text-sm text-slate-200"></pre>
-        </section>
-      </main>
+    /* Copilot swirl icon */
+    .copilot-orb {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: conic-gradient(from 220deg, #29c9f5, #7b61ff, #d63aff, #ff8a3d, #29c9f5);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 12px rgba(123,97,255,.35);
+      flex-shrink: 0;
+    }
+    .copilot-orb::after {
+      content: '';
+      width: 16px; height: 16px; border-radius: 50%;
+      background: white;
+    }
+
+    /* Sidebar */
+    #sidebar {
+      width: 260px; min-height: 100vh;
+      background: #ffffff;
+      border-right: 1px solid #e8e8e8;
+      display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0; bottom: 0;
+      z-index: 40;
+      transition: transform .25s ease;
+    }
+    #sidebar.collapsed { transform: translateX(-260px); }
+
+    /* Top bar */
+    #topbar {
+      height: 56px;
+      background: #ffffff;
+      border-bottom: 1px solid #e8e8e8;
+      display: flex; align-items: center;
+      padding: 0 20px;
+      gap: 12px;
+      position: fixed; top: 0; right: 0;
+      z-index: 30;
+      transition: left .25s ease;
+    }
+
+    /* Main */
+    #main {
+      transition: margin-left .25s ease;
+      padding-top: 56px;
+    }
+
+    /* Card */
+    .ms-card {
+      background: #ffffff;
+      border: 1px solid #e8e8e8;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+      transition: box-shadow .15s;
+    }
+    .ms-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.10); }
+
+    /* Input */
+    .ms-input {
+      width: 100%;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14px;
+      color: #212121;
+      background: #ffffff;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .ms-input:focus {
+      border-color: #7b61ff;
+      box-shadow: 0 0 0 3px rgba(123,97,255,.12);
+    }
+    .ms-input::placeholder { color: #a0a0a0; }
+
+    /* Button */
+    .btn-primary {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 22px; border-radius: 8px; font-size: 14px; font-weight: 600;
+      color: #ffffff; cursor: pointer; border: none;
+      background: linear-gradient(135deg, #7b61ff, #a855f7);
+      box-shadow: 0 2px 8px rgba(123,97,255,.3);
+      transition: transform .1s, box-shadow .15s, opacity .15s;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(123,97,255,.4); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    .btn-secondary {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 9px 20px; border-radius: 8px; font-size: 14px; font-weight: 500;
+      color: #424242; cursor: pointer;
+      background: #ffffff; border: 1.5px solid #e0e0e0;
+      transition: background .15s, border-color .15s;
+    }
+    .btn-secondary:hover { background: #f5f5f5; border-color: #bdbdbd; }
+
+    .btn-new {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px; border-radius: 8px;
+      background: linear-gradient(135deg, #7b61ff, #a855f7);
+      color: white; font-size: 14px; font-weight: 600; cursor: pointer;
+      border: none; width: 100%;
+      box-shadow: 0 2px 8px rgba(123,97,255,.25);
+      transition: box-shadow .15s, transform .1s;
+    }
+    .btn-new:hover { box-shadow: 0 4px 16px rgba(123,97,255,.4); transform: translateY(-1px); }
+
+    /* Tabs */
+    .tab-btn {
+      padding: 8px 18px; border-radius: 8px; font-size: 14px; font-weight: 500;
+      color: #616161; cursor: pointer; border: none; background: transparent;
+      transition: background .15s, color .15s;
+      white-space: nowrap;
+    }
+    .tab-btn.active {
+      background: #f0edff; color: #7b61ff; font-weight: 600;
+    }
+    .tab-btn:hover:not(.active) { background: #f5f5f5; color: #424242; }
+
+    /* Tab panels */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Result bubble */
+    .result-bubble {
+      background: #f8f7ff;
+      border: 1.5px solid #e8e4ff;
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 13.5px;
+      color: #303030;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 400px;
+      overflow-y: auto;
+      line-height: 1.6;
+    }
+    .result-bubble:empty::before {
+      content: "결과가 여기에 표시됩니다...";
+      color: #b0b0b0;
+    }
+
+    /* History item */
+    .hist-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 8px;
+      font-size: 13px; color: #424242; cursor: pointer;
+      transition: background .12s;
+    }
+    .hist-item:hover { background: #f5f4fc; color: #7b61ff; }
+    .hist-item svg { flex-shrink: 0; opacity: .5; }
+
+    /* Spinner */
+    .spinner {
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 2.5px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+    .loading .spinner { display: block; }
+    .loading .btn-label { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Badge */
+    .step-badge {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; flex-shrink: 0;
+    }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 28px; right: 28px; z-index: 100;
+      background: #1f1f1f; color: white; padding: 12px 20px;
+      border-radius: 10px; font-size: 14px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.25);
+      transform: translateY(80px); opacity: 0;
+      transition: transform .3s ease, opacity .3s ease;
+      pointer-events: none;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d0d0d0; border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: #b0b0b0; }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      #sidebar { transform: translateX(-260px); }
+      #sidebar.open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,.12); }
+      #topbar { left: 0 !important; }
+      #main { margin-left: 0 !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<nav id="sidebar">
+  <div class="p-4 border-b border-gray-100">
+    <div class="flex items-center gap-3 px-2 py-1">
+      <div class="copilot-orb"></div>
+      <span class="font-semibold text-gray-800 text-[15px]">Counseling AI</span>
+    </div>
+  </div>
+
+  <div class="p-3">
+    <button class="btn-new" onclick="resetAll()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a.5.5 0 0 1 .5.5v6h6a.5.5 0 0 1 0 1h-6v6a.5.5 0 0 1-1 0v-6h-6a.5.5 0 0 1 0-1h6v-6A.5.5 0 0 1 8 1z"/></svg>
+      새 상담 시작
+    </button>
+  </div>
+
+  <div class="px-3 py-2">
+    <p class="px-2 text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">최근 세션</p>
+    <div id="histList" class="space-y-0.5"></div>
+    <p id="histEmpty" class="text-[13px] text-gray-400 px-2 py-3">저장된 세션이 없습니다.</p>
+  </div>
+
+  <div class="mt-auto p-4 border-t border-gray-100">
+    <div class="hist-item">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      <span>설정</span>
+    </div>
+    <div class="hist-item">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      <span>사용 도움말</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ===== TOP BAR ===== -->
+<header id="topbar" style="left:260px;">
+  <button id="sidebarToggle" onclick="toggleSidebar()"
+    class="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-500" title="사이드바 토글">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+
+  <div class="flex items-center gap-2 ml-1">
+    <div class="copilot-orb" style="width:28px;height:28px;"></div>
+    <span class="font-semibold copilot-gradient-text text-[15px]">Counseling AI</span>
+    <span class="text-gray-300 text-sm mx-1">|</span>
+    <span class="text-gray-500 text-[13px]">상담 분석 + RAG 리포트</span>
+  </div>
+
+  <div class="ml-auto flex items-center gap-2">
+    <span id="statusDot" class="inline-flex items-center gap-1.5 text-xs text-gray-400 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full">
+      <span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+      대기 중
+    </span>
+  </div>
+</header>
+
+<!-- ===== MAIN ===== -->
+<main id="main" style="margin-left:260px;">
+  <div class="max-w-3xl mx-auto px-6 py-8">
+
+    <!-- Hero -->
+    <div class="mb-8">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="copilot-orb" style="width:44px;height:44px;"></div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">안녕하세요!</h1>
+          <p class="text-gray-500 text-sm">상담 내용을 입력하거나 음성을 업로드해 AI 리포트를 받아보세요.</p>
+        </div>
+      </div>
+
+      <!-- Suggestion chips -->
+      <div class="flex flex-wrap gap-2 mt-4">
+        <button onclick="switchTab('text')" class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-purple-200 bg-purple-50 text-purple-700 text-sm font-medium hover:bg-purple-100 transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          텍스트 입력
+        </button>
+        <button onclick="switchTab('audio')" class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-cyan-200 bg-cyan-50 text-cyan-700 text-sm font-medium hover:bg-cyan-100 transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          음성 업로드
+        </button>
+        <button onclick="switchTab('report')" class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm font-medium hover:bg-emerald-100 transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          리포트 생성
+        </button>
+      </div>
     </div>
 
-    <script>
-      const result = document.getElementById('result');
-      const print = (data) => (result.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2));
+    <!-- Tab Nav -->
+    <div class="flex items-center gap-1 p-1 bg-gray-100 rounded-xl mb-6 w-fit">
+      <button id="tab-text"  class="tab-btn active" onclick="switchTab('text')">
+        <span class="flex items-center gap-1.5">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          텍스트
+        </span>
+      </button>
+      <button id="tab-audio" class="tab-btn" onclick="switchTab('audio')">
+        <span class="flex items-center gap-1.5">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+          오디오
+        </span>
+      </button>
+      <button id="tab-report" class="tab-btn" onclick="switchTab('report')">
+        <span class="flex items-center gap-1.5">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          리포트
+        </span>
+      </button>
+    </div>
 
-      document.getElementById('btnIngestText').addEventListener('click', async () => {
-        const client_id = document.getElementById('txtClient').value.trim();
-        const transcript = document.getElementById('txtTranscript').value.trim();
-        if (!client_id || !transcript) return print('client_id와 transcript를 입력하세요.');
-        const res = await fetch('/ingest/text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client_id, transcript }) });
-        print(await res.json());
-      });
+    <!-- ===== TAB: TEXT ===== -->
+    <div id="panel-text" class="tab-panel active">
+      <div class="ms-card p-6">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="step-badge bg-purple-100 text-purple-700">1</div>
+          <div>
+            <h2 class="font-semibold text-gray-800">텍스트 상담 내용 입력</h2>
+            <p class="text-xs text-gray-400 mt-0.5">클라이언트 ID와 상담 기록을 입력하세요.</p>
+          </div>
+        </div>
 
-      document.getElementById('btnIngestAudio').addEventListener('click', async () => {
-        const client_id = document.getElementById('audClient').value.trim();
-        const file = document.getElementById('audFile').files[0];
-        if (!client_id || !file) return print('client_id와 오디오 파일을 입력하세요.');
-        const fd = new FormData();
-        fd.append('client_id', client_id);
-        fd.append('audio', file);
-        const res = await fetch('/ingest/audio', { method: 'POST', body: fd });
-        print(await res.json());
-      });
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">클라이언트 ID</label>
+            <input id="txtClient" class="ms-input" placeholder="예: C001" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">상담 텍스트</label>
+            <textarea id="txtTranscript" rows="6" class="ms-input resize-none" placeholder="상담 내용을 자유롭게 입력하세요…"></textarea>
+          </div>
+          <button id="btnIngestText" class="btn-primary w-full" onclick="ingestText()">
+            <div class="spinner"></div>
+            <span class="btn-label flex items-center gap-2">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              상담 내용 저장
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
 
-      document.getElementById('btnReport').addEventListener('click', async () => {
-        const client_id = document.getElementById('repClient').value.trim();
-        const session_id = document.getElementById('repSession').value.trim();
-        const persona = document.getElementById('repPersona').value;
-        if (!client_id || !session_id) return print('client_id와 session_id를 입력하세요.');
-        const res = await fetch(`/report?client_id=${encodeURIComponent(client_id)}&session_id=${encodeURIComponent(session_id)}&persona=${encodeURIComponent(persona)}`);
-        print(await res.json());
+    <!-- ===== TAB: AUDIO ===== -->
+    <div id="panel-audio" class="tab-panel">
+      <div class="ms-card p-6">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="step-badge bg-cyan-100 text-cyan-700">2</div>
+          <div>
+            <h2 class="font-semibold text-gray-800">음성 파일 업로드 (선택)</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Faster-Whisper로 자동 텍스트 변환 후 저장됩니다.</p>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">클라이언트 ID</label>
+            <input id="audClient" class="ms-input" placeholder="예: C001" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">음성 파일</label>
+            <label for="audFile"
+              class="flex flex-col items-center gap-3 p-8 rounded-xl border-2 border-dashed border-gray-200 hover:border-purple-300 hover:bg-purple-50/30 cursor-pointer transition-colors group">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-gray-300 group-hover:text-purple-400 transition-colors">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+              <span id="audFileLabel" class="text-sm text-gray-400 group-hover:text-purple-500">클릭하거나 파일을 드래그하세요</span>
+              <span class="text-xs text-gray-300">.mp3, .wav, .m4a, .webm 지원</span>
+              <input id="audFile" type="file" accept="audio/*" class="hidden" onchange="updateFileLabel()" />
+            </label>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">언어</label>
+            <select id="audLang" class="ms-input">
+              <option value="ko">한국어 (ko)</option>
+              <option value="en">English (en)</option>
+              <option value="ja">日本語 (ja)</option>
+              <option value="zh">中文 (zh)</option>
+            </select>
+          </div>
+
+          <button id="btnIngestAudio" class="btn-primary w-full" onclick="ingestAudio()"
+            style="background: linear-gradient(135deg, #0ea5e9, #06b6d4); box-shadow: 0 2px 8px rgba(14,165,233,.3);">
+            <div class="spinner"></div>
+            <span class="btn-label flex items-center gap-2">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              오디오 업로드 &amp; 변환
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TAB: REPORT ===== -->
+    <div id="panel-report" class="tab-panel">
+      <div class="ms-card p-6">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="step-badge bg-emerald-100 text-emerald-700">3</div>
+          <div>
+            <h2 class="font-semibold text-gray-800">AI 리포트 생성</h2>
+            <p class="text-xs text-gray-400 mt-0.5">저장된 세션을 분석하고 RAG 기반 인사이트를 생성합니다.</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">클라이언트 ID</label>
+            <input id="repClient" class="ms-input" placeholder="예: C001" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">세션 ID</label>
+            <input id="repSession" class="ms-input" placeholder="session_id" />
+          </div>
+        </div>
+
+        <div class="mb-5">
+          <label class="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">상담 페르소나</label>
+          <div class="grid grid-cols-2 gap-2" id="personaGroup">
+            <button class="persona-btn active" data-value="default" onclick="selectPersona(this)">
+              <span class="text-lg">🤝</span>
+              <div>
+                <div class="font-semibold text-sm">기본형</div>
+                <div class="text-xs text-gray-400">균형잡힌 분석</div>
+              </div>
+            </button>
+            <button class="persona-btn" data-value="warm" onclick="selectPersona(this)">
+              <span class="text-lg">💛</span>
+              <div>
+                <div class="font-semibold text-sm">공감형</div>
+                <div class="text-xs text-gray-400">따뜻한 접근</div>
+              </div>
+            </button>
+            <button class="persona-btn" data-value="coach" onclick="selectPersona(this)">
+              <span class="text-lg">🎯</span>
+              <div>
+                <div class="font-semibold text-sm">코칭형</div>
+                <div class="text-xs text-gray-400">목표 지향적</div>
+              </div>
+            </button>
+            <button class="persona-btn" data-value="strict" onclick="selectPersona(this)">
+              <span class="text-lg">📋</span>
+              <div>
+                <div class="font-semibold text-sm">구조화형</div>
+                <div class="text-xs text-gray-400">체계적 분석</div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex gap-3">
+          <button id="btnReport" class="btn-primary flex-1" onclick="getReport()"
+            style="background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 2px 8px rgba(16,185,129,.3);">
+            <div class="spinner"></div>
+            <span class="btn-label flex items-center gap-2">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              리포트 조회
+            </span>
+          </button>
+          <button id="btnPdf" class="btn-secondary" onclick="getPdf()" title="PDF 다운로드">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            PDF
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== RESULT AREA ===== -->
+    <div id="resultSection" class="mt-5" style="display:none;">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="copilot-orb" style="width:28px;height:28px;"></div>
+        <span class="text-sm font-semibold text-gray-600">Counseling AI 응답</span>
+        <button onclick="clearResult()" class="ml-auto text-xs text-gray-400 hover:text-gray-600 transition-colors">지우기</button>
+      </div>
+      <div id="result" class="result-bubble"></div>
+    </div>
+
+  </div><!-- /max-w -->
+</main>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<style>
+  .persona-btn {
+    display: flex; align-items: center; gap-10px; gap: 10px;
+    padding: 12px 14px; border-radius: 10px;
+    border: 1.5px solid #e8e8e8; background: #fff;
+    cursor: pointer; text-align: left;
+    transition: border-color .15s, background .15s, box-shadow .15s;
+  }
+  .persona-btn:hover { border-color: #c4b5fd; background: #faf7ff; }
+  .persona-btn.active {
+    border-color: #7b61ff; background: #f5f2ff;
+    box-shadow: 0 0 0 3px rgba(123,97,255,.12);
+  }
+</style>
+
+<script>
+  // ---- State ----
+  let sidebarOpen = true;
+  let currentTab = 'text';
+  let selectedPersona = 'default';
+  let sessions = JSON.parse(localStorage.getItem('counsel_sessions') || '[]');
+
+  // ---- Sidebar ----
+  function toggleSidebar() {
+    sidebarOpen = !sidebarOpen;
+    const sb = document.getElementById('sidebar');
+    const tb = document.getElementById('topbar');
+    const mn = document.getElementById('main');
+    if (sidebarOpen) {
+      sb.classList.remove('collapsed');
+      tb.style.left = '260px';
+      mn.style.marginLeft = '260px';
+    } else {
+      sb.classList.add('collapsed');
+      tb.style.left = '0';
+      mn.style.marginLeft = '0';
+    }
+  }
+
+  // ---- Tabs ----
+  function switchTab(tab) {
+    ['text', 'audio', 'report'].forEach(t => {
+      document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+      document.getElementById('panel-' + t).classList.toggle('active', t === tab);
+    });
+    currentTab = tab;
+  }
+
+  // ---- Persona ----
+  function selectPersona(btn) {
+    document.querySelectorAll('.persona-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedPersona = btn.dataset.value;
+  }
+
+  // ---- File label ----
+  function updateFileLabel() {
+    const f = document.getElementById('audFile').files[0];
+    const label = document.getElementById('audFileLabel');
+    label.textContent = f ? f.name : '클릭하거나 파일을 드래그하세요';
+  }
+
+  // ---- Status dot ----
+  function setStatus(state) {
+    const dot = document.getElementById('statusDot');
+    const map = {
+      idle:    ['bg-gray-300', '대기 중'],
+      loading: ['bg-yellow-400', '처리 중…'],
+      ok:      ['bg-emerald-400', '완료'],
+      error:   ['bg-red-400', '오류'],
+    };
+    const [color, text] = map[state] || map.idle;
+    dot.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${color}"></span>${text}`;
+  }
+
+  // ---- Toast ----
+  function showToast(msg, duration = 3000) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), duration);
+  }
+
+  // ---- Result ----
+  function showResult(data) {
+    const el = document.getElementById('result');
+    el.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    document.getElementById('resultSection').style.display = 'block';
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  function clearResult() {
+    document.getElementById('result').textContent = '';
+    document.getElementById('resultSection').style.display = 'none';
+  }
+
+  // ---- Loading state ----
+  function setLoading(btnId, on) {
+    const btn = document.getElementById(btnId);
+    btn.classList.toggle('loading', on);
+    btn.disabled = on;
+    setStatus(on ? 'loading' : 'idle');
+  }
+
+  // ---- History ----
+  function saveSession(clientId, sessionId) {
+    const entry = { clientId, sessionId, ts: new Date().toLocaleString('ko-KR') };
+    sessions = [entry, ...sessions.filter(s => s.sessionId !== sessionId)].slice(0, 20);
+    localStorage.setItem('counsel_sessions', JSON.stringify(sessions));
+    renderHistory();
+  }
+  function renderHistory() {
+    const list = document.getElementById('histList');
+    const empty = document.getElementById('histEmpty');
+    if (!sessions.length) { list.innerHTML = ''; empty.style.display = ''; return; }
+    empty.style.display = 'none';
+    list.innerHTML = sessions.map(s => `
+      <div class="hist-item" onclick="loadSession('${s.clientId}','${s.sessionId}')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <div class="truncate">
+          <div class="font-medium text-gray-700 text-[13px] truncate">${s.clientId}</div>
+          <div class="text-[11px] text-gray-400 truncate">${s.sessionId} · ${s.ts}</div>
+        </div>
+      </div>`).join('');
+  }
+  function loadSession(clientId, sessionId) {
+    document.getElementById('repClient').value = clientId;
+    document.getElementById('repSession').value = sessionId;
+    switchTab('report');
+    showToast('세션을 불러왔습니다.');
+  }
+
+  // ---- Reset ----
+  function resetAll() {
+    ['txtClient','txtTranscript','audClient','repClient','repSession'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    document.getElementById('audFile').value = '';
+    document.getElementById('audFileLabel').textContent = '클릭하거나 파일을 드래그하세요';
+    clearResult();
+    switchTab('text');
+  }
+
+  // ---- API calls ----
+  async function ingestText() {
+    const client_id = document.getElementById('txtClient').value.trim();
+    const transcript = document.getElementById('txtTranscript').value.trim();
+    if (!client_id || !transcript) return showToast('⚠️ client_id와 상담 텍스트를 입력하세요.');
+    setLoading('btnIngestText', true);
+    try {
+      const res = await fetch('/ingest/text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client_id, transcript }),
       });
-    </script>
-  </body>
+      const data = await res.json();
+      showResult(data);
+      if (data.session_id) saveSession(client_id, data.session_id);
+      setStatus('ok');
+      showToast('✅ 상담 내용이 저장되었습니다.');
+    } catch (e) {
+      showResult('오류: ' + e.message);
+      setStatus('error');
+    } finally {
+      setLoading('btnIngestText', false);
+    }
+  }
+
+  async function ingestAudio() {
+    const client_id = document.getElementById('audClient').value.trim();
+    const file = document.getElementById('audFile').files[0];
+    const language = document.getElementById('audLang').value;
+    if (!client_id || !file) return showToast('⚠️ client_id와 오디오 파일을 선택하세요.');
+    setLoading('btnIngestAudio', true);
+    try {
+      const fd = new FormData();
+      fd.append('client_id', client_id);
+      fd.append('audio', file);
+      fd.append('language', language);
+      const res = await fetch('/ingest/audio', { method: 'POST', body: fd });
+      const data = await res.json();
+      showResult(data);
+      if (data.session_id) saveSession(client_id, data.session_id);
+      setStatus('ok');
+      showToast('✅ 오디오 변환 및 저장 완료.');
+    } catch (e) {
+      showResult('오류: ' + e.message);
+      setStatus('error');
+    } finally {
+      setLoading('btnIngestAudio', false);
+    }
+  }
+
+  async function getReport() {
+    const client_id = document.getElementById('repClient').value.trim();
+    const session_id = document.getElementById('repSession').value.trim();
+    if (!client_id || !session_id) return showToast('⚠️ client_id와 session_id를 입력하세요.');
+    setLoading('btnReport', true);
+    try {
+      const url = `/report?client_id=${encodeURIComponent(client_id)}&session_id=${encodeURIComponent(session_id)}&persona=${encodeURIComponent(selectedPersona)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      showResult(data);
+      setStatus('ok');
+      showToast('✅ 리포트가 생성되었습니다.');
+    } catch (e) {
+      showResult('오류: ' + e.message);
+      setStatus('error');
+    } finally {
+      setLoading('btnReport', false);
+    }
+  }
+
+  async function getPdf() {
+    const client_id = document.getElementById('repClient').value.trim();
+    const session_id = document.getElementById('repSession').value.trim();
+    if (!client_id || !session_id) return showToast('⚠️ client_id와 session_id를 입력하세요.');
+    const url = `/report/pdf?client_id=${encodeURIComponent(client_id)}&session_id=${encodeURIComponent(session_id)}&persona=${encodeURIComponent(selectedPersona)}`;
+    window.open(url, '_blank');
+  }
+
+  // ---- Init ----
+  renderHistory();
+
+  // Mobile sidebar close on outside click
+  document.addEventListener('click', e => {
+    if (window.innerWidth <= 768) {
+      const sb = document.getElementById('sidebar');
+      if (sb.classList.contains('open') && !sb.contains(e.target) && !document.getElementById('sidebarToggle').contains(e.target)) {
+        sb.classList.remove('open');
+      }
+    }
+  });
+  if (window.innerWidth <= 768) {
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    sidebarToggle.onclick = () => {
+      document.getElementById('sidebar').classList.toggle('open');
+    };
+  }
+</script>
+</body>
 </html>

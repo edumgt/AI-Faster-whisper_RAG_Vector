@@ -12,24 +12,17 @@
 #     -v $(pwd)/runtime/chroma_store:/app/runtime/chroma_store \
 #     --name psycho-chroma edumgt/psycho-chroma-db:latest
 
-FROM python:3.11-slim
+# Reuse local image that already has sentence-transformers + torch (~7 GB of deps).
+# Only chromadb needs to be added on top.
+FROM education-counsel-webapp:latest
 
 LABEL maintainer="edumgt"
 LABEL description="ChromaDB pre-loaded with Korean psychoanalysis knowledge for RAG counseling"
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir \
-        chromadb>=0.5.5 \
-        sentence-transformers>=3.0.1 \
-        numpy>=1.26.4
+# sentence-transformers, torch, numpy, build-essential already present in base.
+RUN pip install --no-cache-dir "chromadb>=0.5.5"
 
 # Copy source files needed for the build
 COPY src/ ./src/

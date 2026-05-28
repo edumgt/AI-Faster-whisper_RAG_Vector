@@ -1,22 +1,22 @@
-version: "3.9"
-
 services:
   # ----------------------------------------------------------------
   # Pre-built ChromaDB with psychoanalysis knowledge
-  # Image: edumgt/psycho-chroma-db
   # ----------------------------------------------------------------
   psycho-chroma:
+    build:
+      context: .
+      dockerfile: Dockerfile.chromadb
     image: edumgt/psycho-chroma-db:latest
     container_name: psycho-chroma
     ports:
-      - "8001:8001"
+      - "8101:8001"
     volumes:
       # Persist / share the pre-built Chroma store
       - chroma_data:/app/runtime/chroma_store
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c",
-             "import urllib.request; urllib.request.urlopen('http://localhost:8001/api/v1/heartbeat', timeout=5)"]
+             "import urllib.request; urllib.request.urlopen('http://localhost:8001/api/v2/heartbeat', timeout=5)"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -35,7 +35,7 @@ services:
       CHROMA_DIR: runtime/chroma_store
       RUNTIME_DIR: runtime
     ports:
-      - "8000:8000"
+      - "8100:8000"
     volumes:
       - api_runtime:/app/runtime
     depends_on:
